@@ -297,6 +297,9 @@ create policy "attendance_select" on attendance for select using (
 create policy "attendance_write" on attendance for insert with check (
   exists (select 1 from students s where s.id = attendance.student_id and is_class_teacher(s.class_id)) or is_admin()
 );
+create policy "attendance_update" on attendance for update using (
+  exists (select 1 from students s where s.id = attendance.student_id and is_class_teacher(s.class_id)) or is_admin()
+);
 
 -- FEES: student/parent read-only; only admin manages (bursar has no portal yet - use Supabase Table Editor)
 create policy "fees_select" on fees for select using (
