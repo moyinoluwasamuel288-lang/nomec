@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { email, full_name, role, admission_number, class_id, staff_id, link_student_id, relationship } = body
+    const { email, full_name, role, admission_number, class_id, staff_id, link_student_id, relationship, redirect_to } = body
 
     if (!email || !full_name || !role) {
       return json({ error: "email, full_name, and role are required" }, 400)
@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
     // Creates the auth user AND emails them a secure link to set their own password.
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name, role },
+      redirectTo: redirect_to || undefined,
     })
     if (inviteError) {
       return json({ error: inviteError.message }, 400)

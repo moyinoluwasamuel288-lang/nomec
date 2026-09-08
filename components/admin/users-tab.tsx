@@ -48,6 +48,7 @@ export function UsersTab() {
         staff_id: staffId || undefined,
         link_student_id: linkStudentId || undefined,
         relationship: relationship || undefined,
+        redirect_to: `${window.location.origin}/portal/set-password`,
       },
     })
     setSaving(false)
