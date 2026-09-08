@@ -67,6 +67,14 @@ Deno.serve(async (req) => {
     // but set it explicitly here too in case that trigger is ever changed.
     await adminClient.from("profiles").update({ role, full_name }).eq("id", newUserId)
 
+    // Generate a short login ID like NOMEC202502 (NOMEC + 2-digit year + sequence),
+    // so people can sign in with this instead of typing their email.
+    const yearSuffix = new Date().getFullYear().toString().slice(-2)
+    const { count } = await adminClient.from("login_ids").select("*", { count: "exact", head: true }).like("login_id", `NOMEC${yearSuffix}%`)
+    const sequence = String((count || 0) + 1).padStart(2, "0")
+    const loginId = `NOMEC${yearSuffix}${sequence}`
+    await adminClient.from("login_ids").insert({ login_id: loginId, profile_id: newUserId, email })
+
     if (role === "student") {
       const { error } = await adminClient.from("students").insert({
         profile_id: newUserId,
@@ -90,7 +98,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: `User created, but guardian link failed: ${error.message}` }, 500)
     }
 
-    return json({ success: true, user_id: newUserId })
+    return json({ success: true, user_id: newUserId, login_id: loginId })
   } catch (err) {
     return json({ error: String(err) }, 500)
   }

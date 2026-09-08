@@ -199,8 +199,24 @@ create table if not exists announcements (
   created_at timestamptz not null default now()
 );
 
--- =========================================================
--- ROW LEVEL SECURITY
+-- ---------------------------------------------------------
+-- 9. LOGIN IDs
+-- Lets someone sign in with a short ID (e.g. NOMEC202502) instead of
+-- typing their email. Publicly readable by design (needed pre-login to
+-- resolve the ID to an email) but exposes nothing beyond that mapping.
+-- ---------------------------------------------------------
+create table if not exists login_ids (
+  login_id text primary key,
+  profile_id uuid references profiles(id) on delete cascade,
+  email text not null
+);
+
+alter table login_ids enable row level security;
+create policy "login_ids_read_all" on login_ids for select using (true);
+-- No insert/update/delete policy on purpose: only the invite-user Edge Function
+-- (using the service_role key, which bypasses RLS) is allowed to write here.
+
+
 -- Everything below controls exactly who can see/change what.
 -- =========================================================
 
@@ -245,8 +261,14 @@ create policy "profiles_update_own" on profiles for update
 
 -- CLASSES / SUBJECTS / TERMS: readable by any logged-in user
 create policy "classes_read_all" on classes for select using (auth.uid() is not null);
+create policy "classes_write" on classes for insert with check (is_admin());
+create policy "classes_update" on classes for update using (is_admin());
 create policy "subjects_read_all" on subjects for select using (auth.uid() is not null);
+create policy "subjects_write" on subjects for insert with check (is_admin());
+create policy "subjects_update" on subjects for update using (is_admin());
 create policy "terms_read_all" on terms for select using (auth.uid() is not null);
+create policy "terms_write" on terms for insert with check (is_admin());
+create policy "terms_update" on terms for update using (is_admin());
 
 -- STUDENTS: a student sees themself; a parent sees their linked children;
 -- a teacher sees students in classes they teach; admin sees all
@@ -263,6 +285,8 @@ create policy "students_select" on students for select using (
 -- TEACHERS: visible to any logged-in user (needed to show "taught by" names)
 create policy "teachers_read_all" on teachers for select using (auth.uid() is not null);
 create policy "teacher_classes_read_all" on teacher_classes for select using (auth.uid() is not null);
+create policy "teacher_classes_write" on teacher_classes for insert with check (is_admin());
+create policy "teacher_classes_delete" on teacher_classes for delete using (is_admin());
 
 -- STUDENT_GUARDIANS: a parent can see their own links; a student can see who's linked to them
 create policy "guardians_select" on student_guardians for select using (

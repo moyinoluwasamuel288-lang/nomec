@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Lock, Mail, AlertCircle } from "lucide-react"
+import { Lock, User, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 
@@ -17,7 +17,7 @@ const roleRedirect: Record<string, string> = {
 export default function LoginPage() {
   const router = useRouter()
   const { session, profile, loading } = useAuth()
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -32,6 +32,23 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setSubmitting(true)
+
+    let email = identifier.trim()
+    if (!email.includes("@")) {
+      // Not an email -- treat it as a login ID (e.g. NOMEC202502) and resolve it first.
+      const { data, error: lookupError } = await supabase
+        .from("login_ids")
+        .select("email")
+        .eq("login_id", email.toUpperCase())
+        .single()
+      if (lookupError || !data) {
+        setError("That User ID wasn't found. Check it and try again, or use your email instead.")
+        setSubmitting(false)
+        return
+      }
+      email = data.email
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setSubmitting(false)
     if (error) setError(error.message)
@@ -48,14 +65,15 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-nomec-slate mb-2">Email</label>
+            <label className="block text-sm font-medium text-nomec-slate mb-2">Email or User ID</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nomec-slate/40" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nomec-slate/40" />
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com or NOMEC202502"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-nomec-slate/15 rounded-xl focus:outline-none focus:ring-2 focus:ring-nomec-green/30"
               />
             </div>

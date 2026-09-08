@@ -56,7 +56,7 @@ export function UsersTab() {
     if (error || data?.error) {
       setResult({ ok: false, message: data?.error || error?.message || "Something went wrong." })
     } else {
-      setResult({ ok: true, message: `Invite sent to ${email}. They'll get an email to set their password.` })
+      setResult({ ok: true, message: `Invite sent to ${email}. Their login ID is ${data.login_id} — they can sign in with either that or their email.` })
       resetForm()
     }
   }
