@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import {
   ArrowRight, BookOpen, Users, Trophy, Building2,
   GraduationCap, FlaskConical, Palette, Music, Dumbbell,
-  ChevronRight, Star, Quote, MapPin
+  ChevronRight, Star, Quote, MapPin, Medal
 } from "lucide-react"
 import { SectionHeader } from "@/components/section-header"
 import { AnimatedCounter } from "@/components/animated-counter"
@@ -16,7 +16,7 @@ const quickLinks = [
   { href: "/academics", label: "Academics" },
   { href: "/admissions", label: "Admissions" },
   { href: "/campus-life", label: "Campus Life" },
-  { href: "/portal/student", label: "Student Portal" },
+  { href: "/portal/login", label: "Portal Login" },
   { href: "/contact", label: "Contact" },
 ]
 
@@ -58,7 +58,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-base md:text-lg text-white/80 leading-relaxed mb-8 max-w-xl">
-              Diligence, knowledge, and faith in God — Nursery through Senior Secondary in Benin City.
+              Diligence, knowledge, and faith in God. Nursery through Senior Secondary in Benin City.
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
@@ -70,7 +70,7 @@ export default function HomePage() {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="/portal/student"
+                href="/portal/login"
                 className="inline-flex items-center gap-2 px-7 py-3.5 border-2 border-white/40 text-white rounded-xl font-medium hover:border-white hover:bg-white/10 transition-all"
               >
                 Portal Login
@@ -103,7 +103,7 @@ export default function HomePage() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <AnimatedCounter end={25} suffix="+" label="Years of Service" />
+            <AnimatedCounter end={30} suffix="+" label="Years of Service" />
             <AnimatedCounter end={150} suffix="+" label="Qualified Teachers" />
             <AnimatedCounter end={2000} suffix="+" label="Enrolled Students" />
             <AnimatedCounter end={50} suffix="+" label="Awards Won" />
@@ -141,7 +141,7 @@ export default function HomePage() {
                 </h3>
                 <p className="text-nomec-slate/70 leading-relaxed">
                   Founded in 1996 by Deacon (Ambassador) Daniel Nosakhare Eghobamien, NOMEC has grown from a single
-                  mixed intake into a full Montessori-to-Senior-Secondary institution in Benin City — guided by the
+                  mixed intake into a full Montessori-to-Senior-Secondary institution in Benin City, guided by the
                   belief that every child has potential worth developing.
                 </p>
                 <div className="grid grid-cols-2 gap-4 pt-4">
@@ -245,6 +245,54 @@ export default function HomePage() {
                   <p className="text-sm text-nomec-slate/60 group-hover:text-white/70 transition-colors">
                     {facility.desc}
                   </p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Achievements */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SectionHeader
+            title="Notable Achievements"
+            subtitle="Recognition"
+          />
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              {
+                year: "2019",
+                title: "Reading Championship Contest",
+                desc: "Dorcas Okolie placed 1st runner-up in Group A among 770 finalists from 81 schools across Edo State, organised by Readers Resort Initiative of Africa. Won a medal and Award of Excellence plaque.",
+              },
+              {
+                year: "2018/2019",
+                title: "Nigeria Mathematics and Science Olympiads",
+                desc: "Aideyan Freda placed 2nd in Physics in Edo State among over 1,000 candidates, awarded a medal by the Ministry of Education and the National Mathematical Centre. Azugo Victoria, Obanisagbon Beverlyn, and Edomwonyi Ijesuorode Winifred also qualified and were certified at state level.",
+              },
+              {
+                year: "2018",
+                title: "National Mathematics Competition",
+                desc: "NOMEC placed first in an inter-school Mathematics competition held nationally.",
+              },
+              {
+                year: "2019",
+                title: "Spelling Bee Competition",
+                desc: "NOMEC students won the Spelling Bee Competition.",
+              },
+            ].map((item, i) => (
+              <ScrollReveal key={item.title} delay={i * 0.1}>
+                <div className="flex gap-4 p-6 rounded-2xl bg-nomec-cream hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 rounded-xl bg-nomec-gold/15 flex items-center justify-center shrink-0">
+                    <Medal className="w-6 h-6 text-nomec-gold" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-nomec-green mb-1">{item.year}</p>
+                    <h4 className="font-serif text-lg text-nomec-slate mb-2">{item.title}</h4>
+                    <p className="text-sm text-nomec-slate/60 leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
               </ScrollReveal>
             ))}

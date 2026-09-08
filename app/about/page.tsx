@@ -24,7 +24,7 @@ const values = [
   {
     icon: Globe,
     title: "Service",
-    description: "Educating \"the total man\" — preparing pupils to contribute meaningfully to society.",
+    description: "Educating \"the total man\", preparing pupils to contribute meaningfully to society.",
   },
 ]
 
@@ -213,16 +213,26 @@ export default function AboutPage() {
 
           <div className="grid sm:grid-cols-2 gap-8 max-w-3xl">
             {[
-              { name: "Deacon (Ambassador) Daniel Nosakhare Eghobamien", role: "Founder", desc: "Established the school on Upper Mission Road, Benin City, with its first intake in September 1996." },
-              { name: "Mrs. M. O. Omobude", role: "Executive Director", desc: "Established the Montessori section on 13 January 2003 and has overseen its growth since." },
+              { name: "Deacon (Ambassador) Daniel Nosakhare Eghobamien", role: "Founder (1996–2026)", desc: "Established the school on Upper Mission Road, Benin City, with its first intake in September 1996. Passed away in 2026.", photo: "/images/founder-eghobamien.jpg" },
+              { name: "Mrs. M. O. Omobude", role: "Executive Director", desc: "Established the Montessori section on 13 January 2003 and has overseen its growth since.", photo: null },
             ].map((officer, i) => (
               <ScrollReveal key={officer.name} delay={i * 0.1}>
                 <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-16 h-16 bg-nomec-green/10 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-nomec-green font-serif font-bold text-xl">
-                      {officer.name.split(" ").filter(w => /^[A-Z]/.test(w)).map(n => n[0]).slice(0,2).join("")}
-                    </span>
-                  </div>
+                  {officer.photo ? (
+                    <div className="w-16 h-16 rounded-full overflow-hidden mb-4">
+                      <img
+                        src={officer.photo}
+                        alt={officer.name}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 bg-nomec-green/10 rounded-full flex items-center justify-center mb-4">
+                      <span className="text-nomec-green font-serif font-bold text-xl">
+                        {officer.name.split(" ").filter(w => /^[A-Z]/.test(w)).map(n => n[0]).slice(0,2).join("")}
+                      </span>
+                    </div>
+                  )}
                   <h4 className="font-serif text-lg text-nomec-slate">{officer.name}</h4>
                   <p className="text-sm text-nomec-gold font-medium mt-1">{officer.role}</p>
                   <p className="text-sm text-nomec-slate/60 mt-3">{officer.desc}</p>
