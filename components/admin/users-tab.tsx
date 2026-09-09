@@ -1,13 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { UserPlus, CheckCircle2, AlertCircle } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { UserPlus, CheckCircle2, AlertCircle, Users, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/components/auth-provider"
 
 interface ClassOption { id: string; name: string }
 interface StudentOption { id: string; full_name: string; admission_number: string }
+interface ProfileRow { id: string; role: string; full_name: string }
+
+async function readFunctionError(error: any, data: any): Promise<string> {
+  if (data?.error) return data.error
+  if (error?.context?.json) {
+    try {
+      const body = await error.context.json()
+      if (body?.error) return body.error
+    } catch {
+      try {
+        const text = await error.context.text()
+        if (text) return text
+      } catch {}
+    }
+  }
+  return error?.message || "Something went wrong."
+}
 
 export function UsersTab() {
+  const { profile: myProfile } = useAuth()
   const [role, setRole] = useState<"student" | "parent" | "teacher" | "admin">("student")
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
@@ -19,13 +38,21 @@ export function UsersTab() {
 
   const [classes, setClasses] = useState<ClassOption[]>([])
   const [students, setStudents] = useState<StudentOption[]>([])
+  const [allUsers, setAllUsers] = useState<ProfileRow[]>([])
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const loadUsers = useCallback(async () => {
+    const { data } = await supabase.from("profiles").select("id, role, full_name").order("full_name")
+    setAllUsers(data || [])
+  }, [])
 
   useEffect(() => {
     supabase.from("classes").select("id, name").then(({ data }) => setClasses(data || []))
     supabase.from("students").select("id, full_name, admission_number").then(({ data }) => setStudents(data || []))
-  }, [])
+    loadUsers()
+  }, [loadUsers])
 
   function resetForm() {
     setEmail(""); setFullName(""); setAdmissionNumber(""); setClassId("")
@@ -51,19 +78,34 @@ export function UsersTab() {
         redirect_to: `${window.location.origin}/portal/set-password`,
       },
     })
-    setSaving(false)
 
     if (error || data?.error) {
-      setResult({ ok: false, message: data?.error || error?.message || "Something went wrong." })
+      const message = await readFunctionError(error, data)
+      setResult({ ok: false, message })
     } else {
       setResult({ ok: true, message: `Invite sent to ${email}. Their login ID is ${data.login_id} — they can sign in with either that or their email.` })
       resetForm()
+      loadUsers()
+    }
+    setSaving(false)
+  }
+
+  async function handleDelete(userId: string, name: string) {
+    if (!confirm(`Remove ${name}'s account? This cannot be undone.`)) return
+    setDeletingId(userId)
+    const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: userId } })
+    setDeletingId(null)
+    if (error || data?.error) {
+      const message = await readFunctionError(error, data)
+      alert(`Couldn't remove that account: ${message}`)
+    } else {
+      loadUsers()
     }
   }
 
   return (
-    <div className="max-w-lg">
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
+    <div className="grid lg:grid-cols-2 gap-6">
+      <div className="bg-white rounded-2xl p-6 shadow-sm h-fit">
         <div className="flex items-center gap-2 mb-5">
           <UserPlus className="w-5 h-5 text-nomec-green" />
           <h3 className="font-serif text-lg text-nomec-slate">Invite a User</h3>
@@ -149,6 +191,34 @@ export function UsersTab() {
             {saving ? "Sending invite..." : "Send Invite"}
           </button>
         </form>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm h-fit">
+        <div className="flex items-center gap-2 mb-5">
+          <Users className="w-5 h-5 text-nomec-green" />
+          <h3 className="font-serif text-lg text-nomec-slate">Manage Users</h3>
+        </div>
+        <div className="space-y-1 max-h-[500px] overflow-y-auto">
+          {allUsers.length === 0 && <p className="text-sm text-nomec-slate/40">No users yet.</p>}
+          {allUsers.map((u) => (
+            <div key={u.id} className="flex items-center justify-between py-2.5 px-1 border-b border-nomec-slate/5 last:border-0">
+              <div>
+                <p className="text-sm text-nomec-slate">{u.full_name}</p>
+                <p className="text-xs text-nomec-slate/40 capitalize">{u.role}</p>
+              </div>
+              {u.id !== myProfile?.id && (
+                <button
+                  onClick={() => handleDelete(u.id, u.full_name)}
+                  disabled={deletingId === u.id}
+                  className="p-2 text-nomec-coral hover:bg-nomec-coral/10 rounded-lg transition-colors disabled:opacity-50"
+                  title="Remove user"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

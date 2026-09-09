@@ -263,12 +263,15 @@ create policy "profiles_update_own" on profiles for update
 create policy "classes_read_all" on classes for select using (auth.uid() is not null);
 create policy "classes_write" on classes for insert with check (is_admin());
 create policy "classes_update" on classes for update using (is_admin());
+create policy "classes_delete" on classes for delete using (is_admin());
 create policy "subjects_read_all" on subjects for select using (auth.uid() is not null);
 create policy "subjects_write" on subjects for insert with check (is_admin());
 create policy "subjects_update" on subjects for update using (is_admin());
+create policy "subjects_delete" on subjects for delete using (is_admin());
 create policy "terms_read_all" on terms for select using (auth.uid() is not null);
 create policy "terms_write" on terms for insert with check (is_admin());
 create policy "terms_update" on terms for update using (is_admin());
+create policy "terms_delete" on terms for delete using (is_admin());
 
 -- STUDENTS: a student sees themself; a parent sees their linked children;
 -- a teacher sees students in classes they teach; admin sees all
