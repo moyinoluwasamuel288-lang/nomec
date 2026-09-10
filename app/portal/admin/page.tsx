@@ -1,17 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Wallet, UserPlus, School, LogOut } from "lucide-react"
+import { Wallet, UserPlus, School, Megaphone, LogOut } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { PortalGuard } from "@/components/portal-guard"
 import { FeesTab } from "@/components/admin/fees-tab"
 import { UsersTab } from "@/components/admin/users-tab"
 import { ClassesTab } from "@/components/admin/classes-tab"
+import { AnnouncementsTab } from "@/components/admin/announcements-tab"
 
 const tabs = [
   { id: "fees", icon: Wallet, label: "Fees" },
   { id: "users", icon: UserPlus, label: "Add User" },
   { id: "classes", icon: School, label: "Classes & Subjects" },
+  { id: "announcements", icon: Megaphone, label: "Announcements" },
 ]
 
 function AdminPortalContent() {
@@ -54,6 +56,7 @@ function AdminPortalContent() {
         {activeTab === "fees" && <FeesTab />}
         {activeTab === "users" && <UsersTab />}
         {activeTab === "classes" && <ClassesTab />}
+        {activeTab === "announcements" && <AnnouncementsTab />}
       </div>
     </section>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Plus, Pencil, Trash2, Check, X, CheckCircle2, AlertCircle, School, BookMarked, CalendarRange, Link2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, X, CheckCircle2, AlertCircle, School, BookMarked, CalendarRange, Link2, ClipboardList } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface ClassRow { id: string; name: string; level: string; academic_year: string }
@@ -160,6 +160,8 @@ export function ClassesTab() {
           ))}
         </div>
       </div>
+
+      <RegisterSubjectsCard classes={classes} terms={terms} onDone={showToast} />
 
       {toast && (
         <div className="fixed bottom-6 right-6 flex items-center gap-2 bg-nomec-slate text-white px-4 py-3 rounded-xl shadow-lg text-sm">
@@ -361,3 +363,95 @@ function AssignTeacherForm({
     </form>
   )
 }
+
+function RegisterSubjectsCard({
+  classes, terms, onDone,
+}: {
+  classes: ClassRow[]
+  terms: TermRow[]
+  onDone: (msg: string) => void
+}) {
+  const [classId, setClassId] = useState("")
+  const [termId, setTermId] = useState("")
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleRegister() {
+    setError("")
+    if (!classId || !termId) { setError("Pick a class and a term."); return }
+    setWorking(true)
+
+    const [studentsRes, subjectsRes] = await Promise.all([
+      supabase.from("students").select("id").eq("class_id", classId),
+      supabase.from("teacher_classes").select("subject_id").eq("class_id", classId),
+    ])
+
+    const students = studentsRes.data || []
+    const subjectIds = Array.from(new Set((subjectsRes.data || []).map((r) => r.subject_id)))
+
+    if (students.length === 0) {
+      setError("No students are in this class yet.")
+      setWorking(false)
+      return
+    }
+    if (subjectIds.length === 0) {
+      setError("This class has no subjects assigned yet — assign a teacher to a subject for this class first.")
+      setWorking(false)
+      return
+    }
+
+    const rows = students.flatMap((s) =>
+      subjectIds.map((subject_id) => ({
+        student_id: s.id, subject_id, term_id: termId, ca_score: 0, exam_score: 0,
+      }))
+    )
+
+    // ignoreDuplicates so any grade a teacher already entered is left untouched --
+    // this only fills in the gaps, never overwrites real scores.
+    const { error } = await supabase.from("grades").upsert(rows, {
+      onConflict: "student_id,subject_id,term_id",
+      ignoreDuplicates: true,
+    })
+
+    setWorking(false)
+    if (error) setError(error.message)
+    else onDone(`Registered ${students.length} student(s) across ${subjectIds.length} subject(s)`)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm h-fit lg:col-span-2">
+      <div className="flex items-center gap-2 mb-4">
+        <ClipboardList className="w-5 h-5 text-nomec-green" />
+        <h3 className="font-serif text-lg text-nomec-slate">Register Students for Subjects</h3>
+      </div>
+      <p className="text-sm text-nomec-slate/60 mb-4">
+        Creates a 0.00 placeholder grade for every student in the class, for every subject already assigned to that class — so their dashboard shows real subjects to be graded instead of nothing, before any scores are entered.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="text-xs text-nomec-slate/50 block mb-1.5">Class</label>
+          <select value={classId} onChange={(e) => setClassId(e.target.value)} className="px-3 py-2 border border-nomec-slate/15 rounded-lg text-sm min-w-[160px]">
+            <option value="">Select class</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-nomec-slate/50 block mb-1.5">Term</label>
+          <select value={termId} onChange={(e) => setTermId(e.target.value)} className="px-3 py-2 border border-nomec-slate/15 rounded-lg text-sm min-w-[160px]">
+            <option value="">Select term</option>
+            {terms.map((t) => <option key={t.id} value={t.id}>{t.name} {t.academic_year}</option>)}
+          </select>
+        </div>
+        <button
+          onClick={handleRegister}
+          disabled={working}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-nomec-green text-white rounded-lg text-sm font-medium hover:bg-nomec-green-light transition-colors disabled:opacity-60"
+        >
+          {working ? "Registering..." : "Register"}
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
+    </div>
+  )
+}
+

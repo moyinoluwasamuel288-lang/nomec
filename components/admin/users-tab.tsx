@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider"
 
 interface ClassOption { id: string; name: string }
 interface StudentOption { id: string; full_name: string; admission_number: string }
-interface ProfileRow { id: string; role: string; full_name: string }
+interface ProfileRow { id: string; role: string; full_name: string; detail: string }
 
 async function readFunctionError(error: any, data: any): Promise<string> {
   if (data?.error) return data.error
@@ -44,8 +44,33 @@ export function UsersTab() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const loadUsers = useCallback(async () => {
-    const { data } = await supabase.from("profiles").select("id, role, full_name").order("full_name")
-    setAllUsers(data || [])
+    const [profilesRes, studentsRes, teachersRes, guardiansRes] = await Promise.all([
+      supabase.from("profiles").select("id, role, full_name").order("full_name"),
+      supabase.from("students").select("profile_id, admission_number, classes(name)"),
+      supabase.from("teachers").select("profile_id, staff_id"),
+      supabase.from("student_guardians").select("guardian_profile_id, relationship, students(full_name)"),
+    ])
+
+    const studentMap = new Map((studentsRes.data || []).map((s: any) => [s.profile_id, `${s.admission_number} · ${s.classes?.name || "No class yet"}`]))
+    const teacherMap = new Map((teachersRes.data || []).map((t: any) => [t.profile_id, `Staff ID ${t.staff_id}`]))
+    const guardianMap = new Map<string, string[]>()
+    ;((guardiansRes.data as any) || []).forEach((g: any) => {
+      const list = guardianMap.get(g.guardian_profile_id) || []
+      list.push(g.students?.full_name || "Unknown")
+      guardianMap.set(g.guardian_profile_id, list)
+    })
+
+    const enriched = (profilesRes.data || []).map((p) => {
+      let detail = ""
+      if (p.role === "student") detail = studentMap.get(p.id) || "Not linked to a student record yet"
+      else if (p.role === "teacher") detail = teacherMap.get(p.id) || "No staff ID yet"
+      else if (p.role === "parent") {
+        const kids = guardianMap.get(p.id)
+        detail = kids && kids.length > 0 ? `Parent of ${kids.join(", ")}` : "No children linked yet"
+      } else if (p.role === "admin") detail = "Admin / Bursary Staff"
+      return { ...p, detail }
+    })
+    setAllUsers(enriched)
   }, [])
 
   useEffect(() => {
@@ -204,7 +229,9 @@ export function UsersTab() {
             <div key={u.id} className="flex items-center justify-between py-2.5 px-1 border-b border-nomec-slate/5 last:border-0">
               <div>
                 <p className="text-sm text-nomec-slate">{u.full_name}</p>
-                <p className="text-xs text-nomec-slate/40 capitalize">{u.role}</p>
+                <p className="text-xs text-nomec-slate/40">
+                  <span className="capitalize font-medium">{u.role}</span> · {u.detail}
+                </p>
               </div>
               {u.id !== myProfile?.id && (
                 <button

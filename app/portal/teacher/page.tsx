@@ -142,7 +142,10 @@ function TeacherPortalContent() {
 
         {teacherId && assignments.length === 0 && (
           <div className="bg-white rounded-2xl p-8 text-center">
-            <p className="text-nomec-slate/60">No classes assigned to you yet. Contact the school office.</p>
+            <p className="text-nomec-slate/60 mb-4">No classes assigned to you yet. Contact the school office.</p>
+            <button onClick={signOut} className="inline-flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
           </div>
         )}
 
