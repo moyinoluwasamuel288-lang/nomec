@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider"
 
 interface ClassOption { id: string; name: string }
 interface StudentOption { id: string; full_name: string; admission_number: string }
-interface ProfileRow { id: string; role: string; full_name: string; detail: string }
+interface ProfileRow { id: string; role: string; full_name: string; detail: string; className: string | null }
 
 async function readFunctionError(error: any, data: any): Promise<string> {
   if (data?.error) return data.error
@@ -51,7 +51,7 @@ export function UsersTab() {
       supabase.from("student_guardians").select("guardian_profile_id, relationship, students(full_name)"),
     ])
 
-    const studentMap = new Map((studentsRes.data || []).map((s: any) => [s.profile_id, `${s.admission_number} · ${s.classes?.name || "No class yet"}`]))
+    const studentMap = new Map((studentsRes.data || []).map((s: any) => [s.profile_id, { detail: `${s.admission_number} · ${s.classes?.name || "No class yet"}`, className: s.classes?.name || null }]))
     const teacherMap = new Map((teachersRes.data || []).map((t: any) => [t.profile_id, `Staff ID ${t.staff_id}`]))
     const guardianMap = new Map<string, string[]>()
     ;((guardiansRes.data as any) || []).forEach((g: any) => {
@@ -62,13 +62,17 @@ export function UsersTab() {
 
     const enriched = (profilesRes.data || []).map((p) => {
       let detail = ""
-      if (p.role === "student") detail = studentMap.get(p.id) || "Not linked to a student record yet"
-      else if (p.role === "teacher") detail = teacherMap.get(p.id) || "No staff ID yet"
+      let className: string | null = null
+      if (p.role === "student") {
+        const s = studentMap.get(p.id)
+        detail = s?.detail || "Not linked to a student record yet"
+        className = s?.className || null
+      } else if (p.role === "teacher") detail = teacherMap.get(p.id) || "No staff ID yet"
       else if (p.role === "parent") {
         const kids = guardianMap.get(p.id)
         detail = kids && kids.length > 0 ? `Parent of ${kids.join(", ")}` : "No children linked yet"
       } else if (p.role === "admin") detail = "Admin / Bursary Staff"
-      return { ...p, detail }
+      return { ...p, detail, className }
     })
     setAllUsers(enriched)
   }, [])
@@ -223,30 +227,75 @@ export function UsersTab() {
           <Users className="w-5 h-5 text-nomec-green" />
           <h3 className="font-serif text-lg text-nomec-slate">Manage Users</h3>
         </div>
-        <div className="space-y-1 max-h-[500px] overflow-y-auto">
+        <div className="space-y-5 max-h-[600px] overflow-y-auto">
           {allUsers.length === 0 && <p className="text-sm text-nomec-slate/40">No users yet.</p>}
-          {allUsers.map((u) => (
-            <div key={u.id} className="flex items-center justify-between py-2.5 px-1 border-b border-nomec-slate/5 last:border-0">
-              <div>
-                <p className="text-sm text-nomec-slate">{u.full_name}</p>
-                <p className="text-xs text-nomec-slate/40">
-                  <span className="capitalize font-medium">{u.role}</span> · {u.detail}
-                </p>
-              </div>
-              {u.id !== myProfile?.id && (
-                <button
-                  onClick={() => handleDelete(u.id, u.full_name)}
-                  disabled={deletingId === u.id}
-                  className="p-2 text-nomec-coral hover:bg-nomec-coral/10 rounded-lg transition-colors disabled:opacity-50"
-                  title="Remove user"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
+
+          {(() => {
+            const staff = allUsers.filter((u) => u.role === "admin" || u.role === "teacher")
+            const parents = allUsers.filter((u) => u.role === "parent")
+            const studentsList = allUsers.filter((u) => u.role === "student")
+            const byClass = new Map<string, ProfileRow[]>()
+            studentsList.forEach((s) => {
+              const key = s.className || "Unassigned"
+              byClass.set(key, [...(byClass.get(key) || []), s])
+            })
+            const classNames = Array.from(byClass.keys()).sort((a, b) => a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b))
+
+            return (
+              <>
+                {staff.length > 0 && (
+                  <UserGroup title="Staff" users={staff} myId={myProfile?.id} deletingId={deletingId} onDelete={handleDelete} />
+                )}
+                {classNames.map((cls) => (
+                  <UserGroup key={cls} title={`Students — ${cls}`} users={byClass.get(cls)!} myId={myProfile?.id} deletingId={deletingId} onDelete={handleDelete} />
+                ))}
+                {parents.length > 0 && (
+                  <UserGroup title="Parents" users={parents} myId={myProfile?.id} deletingId={deletingId} onDelete={handleDelete} />
+                )}
+              </>
+            )
+          })()}
         </div>
       </div>
     </div>
   )
 }
+
+function UserGroup({
+  title, users, myId, deletingId, onDelete,
+}: {
+  title: string
+  users: ProfileRow[]
+  myId: string | undefined
+  deletingId: string | null
+  onDelete: (id: string, name: string) => void
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-nomec-green uppercase tracking-wide mb-2">{title} ({users.length})</p>
+      <div className="space-y-1">
+        {users.map((u) => (
+          <div key={u.id} className="flex items-center justify-between py-2 px-1 border-b border-nomec-slate/5 last:border-0">
+            <div>
+              <p className="text-sm text-nomec-slate">{u.full_name}</p>
+              <p className="text-xs text-nomec-slate/40">
+                <span className="capitalize font-medium">{u.role}</span> · {u.detail}
+              </p>
+            </div>
+            {u.id !== myId && (
+              <button
+                onClick={() => onDelete(u.id, u.full_name)}
+                disabled={deletingId === u.id}
+                className="p-2 text-nomec-coral hover:bg-nomec-coral/10 rounded-lg transition-colors disabled:opacity-50"
+                title="Remove user"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
